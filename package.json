@@ -1,0 +1,26 @@
+{
+  "name": "university_payments",
+  "version": "1.0.0",
+  "description": "A set of smart contracts which can be used by a university to handle course enrolment and admissions.",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/william-coulter/university_admissions_system.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/william-coulter/university_admissions_system/issues"
+  },
+  "homepage": "https://github.com/william-coulter/university_admissions_system#readme"
+}
