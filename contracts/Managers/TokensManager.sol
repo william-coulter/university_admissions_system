@@ -12,10 +12,10 @@ contract TokensManager is ERC20 {
     address internal _roundManager;
     RolesManager internal _rolesManager;
 
-    constructor(uint256 initialSupply, address _rnd, address _rls) ERC20("AdmissionTokens", "AT") {
+    constructor(uint256 initialSupply, address _rnd, RolesManager _rls) ERC20("AdmissionTokens", "AT") {
         _mint(msg.sender, initialSupply);
         _roundManager = _rnd;
-        _rolesManager = RolesManager(_rls);
+        _rolesManager = _rls;
     }
 
     modifier requiresRoundManager {

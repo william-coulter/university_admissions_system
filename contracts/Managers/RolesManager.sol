@@ -28,6 +28,17 @@ contract RolesManager {
     }
 
     /**
+     * Requires that the caller is a a student
+     */
+    modifier requiresStudent {
+        require(
+            _roles[msg.sender] == Roles.Student
+            , "Only an authorize student can call this function"
+        );
+        _;
+    }
+
+    /**
      * Authorizes the contract address to the supplied role
      */
     function authorize(address authorizee, Roles role) public requiresUser returns (address) {
