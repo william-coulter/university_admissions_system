@@ -220,8 +220,7 @@ contract RoundManager {
     function seeAllBids() public view requiresStudent returns (Bid[] memory){
         Bid[] memory ret = new Bid[](coursesCount);
         for (uint256 i = 0; i < coursesCount; i++) {
-            for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {
-                // TODO: is this the right way around?
+            for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {                
                 ret[i] = _bidsPerCourse[courses[i]][j];
             }   
         }
@@ -237,7 +236,7 @@ contract RoundManager {
     function kill() public requiresSessionManager {
         uint256 remainingTokens = _tokensManager.allowance(address(_tokensManager), address(this));
         _tokensManager.transferFrom(address(this), address(_tokensManager), remainingTokens);
-        
+
         selfdestruct(payable(address(this)));
     }
 }

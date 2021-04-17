@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./RoundManager.sol";
 import "./RolesManager.sol";
+import "./CourseManager.sol";
 
 contract SessionManager {
 
@@ -11,12 +12,16 @@ contract SessionManager {
     address internal _COO;
     RoundManager internal _currRound;
     RolesManager internal _rolesManager;
+    TokensManager internal _tokensManager;
+    CourseManager internal _courseManager;
 
     uint256 internal _deadline;
 
-    constructor(address _coo, RoundManager _rnd, RolesManager _rls) {
+    constructor(address _coo, RoundManager _rnd, RolesManager _rls, TokensManager _tks, CourseManager _crs) {
         _currRound = _rnd;
         _rolesManager = _rls;
+        _tokensManager = _tks;
+        _courseManager = _crs;
         _COO = _coo;
         _deadline = block.timestamp + oneDay;
     }
@@ -54,11 +59,12 @@ contract SessionManager {
         _;
     }
 
-    // TODO:
-    // function newRound() internal returns (RoundManager) {
-    //     return _COO.startNewRound();
-    //      _deadline = block.timestamp + oneDay;
-    // }
+    /**
+     * Starts a new round.
+     */
+    function newRound() internal returns (RoundManager) {
+        return new RoundManager(_tokensManager, _rolesManager, this, _courseManager);
+    }
 
     /**
      * Ensures that the deadline has passed and starts a new round if required.
@@ -75,7 +81,7 @@ contract SessionManager {
 
         if (startNewRound) {
             _currRound.kill();
-            // TODO: _currRound = newRound();
+            _currRound = newRound();
             _deadline = block.timestamp + oneDay;
         }
 
@@ -95,11 +101,9 @@ contract SessionManager {
     }
 
     /**
-     * Returns the current round. 
-     *
-     * This function is used by students so that they can add their bids.
+     * Returns the current round.
      */
-    function getCurrRound() public view requiresStudent returns (RoundManager) {
+    function getCurrRound() public view returns (RoundManager) {
         return _currRound;
     }
 }

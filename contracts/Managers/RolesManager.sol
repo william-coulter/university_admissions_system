@@ -21,7 +21,9 @@ contract RolesManager {
      */
     modifier requiresUser {
         require(
-            (_roles[msg.sender] != Roles.Unknown || msg.sender == _COO)
+            (_roles[msg.sender] != Roles.Unknown 
+            || _roles[msg.sender] != Roles.Revoked
+            || msg.sender == _COO)
             , "Only a system user can call this function"
         );
         _;
@@ -90,7 +92,7 @@ contract RolesManager {
     /**
      * Returns true if the user has the supplied role
      */
-    function hasRole(address user, Roles role) public view requiresUser returns (bool) {
+    function hasRole(address user, Roles role) public view returns (bool) {
         return _roles[user] == role;
     }
 }
