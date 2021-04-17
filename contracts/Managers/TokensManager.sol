@@ -37,17 +37,37 @@ contract TokensManager is ERC20 {
     function approve(address spender, uint256 amount) public virtual override requiresStudent returns (bool) {
         return super.approve(spender, amount);
     }
-    
+
 
     /**
      * Transfers token allowance from the sender to the recipient.
      * The university takes a 10% cut.
+     *
+     * Will fail and revert state if either transfer fails.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public override requiresStudent returns (bool) {
-        // University takes 10% of the fee
-        uint256 newAmount = (amount * 9) / 10;
+    function transferToStudent(address recipient, uint256 amount) public requiresStudent returns (bool) {
+        require(
+            _rolesManager.hasRole(recipient, RolesManager.Roles.Student)
+            , "Recipient must be a student"
+        );
 
-        return super.transferFrom(sender, recipient, newAmount);
+        address sender = msg.sender;
+
+        uint256 universityFee = (amount * 1) / 10;
+        uint256 newAmount = amount - universityFee;
+
+        require(
+            super.transferFrom(sender, address(this), universityFee)
+            , "Could not transfer fee to university"
+        );
+
+        require(
+            super.transferFrom(sender, recipient, newAmount)
+            , "Could not transfer fee to student"
+        );
+
+
+        return true;
     }
 
     /**

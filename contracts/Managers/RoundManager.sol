@@ -21,6 +21,7 @@ contract RoundManager {
     TokensManager internal _tokensManager;
     RolesManager internal _rolesManager;
     SessionManager internal _sessionManager;
+    CourseManager internal _courseManager;
 
     // Mapping from Course.code to Bid. Also keeps track of the number of courses.
     mapping (string => Bid[]) internal _bidsPerCourse;
@@ -34,10 +35,11 @@ contract RoundManager {
     mapping (address => Bid[]) internal _bidsPerStudent;
     uint256 internal studentsCount = 0;
 
-    constructor(TokensManager _tks, RolesManager _rls, SessionManager _ssm) {
+    constructor(TokensManager _tks, RolesManager _rls, SessionManager _ssm, CourseManager _crs) {
         _tokensManager = _tks;
         _rolesManager = _rls;
         _sessionManager = _ssm;
+        _courseManager = _crs;
     }
 
     /**
@@ -65,13 +67,49 @@ contract RoundManager {
 
     /**
      * Executes all bids and returns tokens to students. Returns true
-     * if there needs to be another bidding round.
-     *
-     * This function destroys this contract after returning
+     * if there needs to be another bidding round i.e tokens were returned
+     * to students
      */
-    function executeRound() public view requiresSessionManager returns (bool) {
-        // TODO
-        return true;
+    function executeRound() public requiresSessionManager returns (bool) {
+        // Flag to mark whether tokens were returned to students
+        bool tokensReturned = false;        
+
+        for (uint256 i = 0; i < coursesCount; i++) {
+
+            uint256 enrolledInCourse = _bidsPerCourse[courses[i]][0].course.enrolled.length;
+            address[] storage newEnrolment = _bidsPerCourse[courses[i]][0].course.enrolled;
+            uint16 courseQuota = _bidsPerCourse[courses[i]][0].course.quota;
+
+            for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {
+                Bid memory currBid = _bidsPerCourse[courses[i]][j];
+
+                // Successful enrolment
+                if (enrolledInCourse < courseQuota) {
+
+                    // enrol the student
+                    newEnrolment.push(currBid.student);
+
+                    // transfer allowance back to tokens manager
+                    _tokensManager.transferFrom(address(this), address(_tokensManager), currBid.amount);
+
+                    // destroy the tokens
+                    _tokensManager.destroyTokens(currBid.amount);
+
+                // Student missed out
+                } else {
+                    // return tokens to the student
+                    tokensReturned = true;
+                    _tokensManager.transferFrom(address(this), currBid.student, currBid.amount);
+                }
+            }   
+
+            // set the new enrolment for the course
+            _courseManager.setEnrolment(_bidsPerCourse[courses[i]][0].course.code, newEnrolment);
+
+            // next course
+        }
+
+        return tokensReturned;
     }
 
     function addBid(Bid memory bid) public requiresStudent {
@@ -175,7 +213,7 @@ contract RoundManager {
 
         require(
             deleted1 && deleted2
-            , "Could not alter bid"
+            , "Could not remove bid"
         );
     }
 
@@ -189,5 +227,17 @@ contract RoundManager {
         }
         
         return ret;
+    }
+
+    /**
+     * Called by the session manager once the round is executed
+     *
+     * Returns any hanging tokens (there shouldn't be any) back to the tokens manager
+     */
+    function kill() public requiresSessionManager {
+        uint256 remainingTokens = _tokensManager.allowance(address(_tokensManager), address(this));
+        _tokensManager.transferFrom(address(this), address(_tokensManager), remainingTokens);
+        
+        selfdestruct(payable(address(this)));
     }
 }
