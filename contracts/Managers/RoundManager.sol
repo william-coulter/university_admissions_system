@@ -5,6 +5,7 @@ import "./TokensManager.sol";
 import "./CourseManager.sol";
 import "./RolesManager.sol";
 import "./SessionManager.sol";
+import "../Users/ChiefOperatingOfficer.sol";
 
 /**
  *  The RoundManager is responsible for managing bids for the current round.
@@ -18,6 +19,8 @@ contract RoundManager {
         uint256 updated;
     }
 
+    ChiefOperatingOfficer internal _COO;
+    
     TokensManager internal _tokensManager;
     RolesManager internal _rolesManager;
     SessionManager internal _sessionManager;
@@ -35,11 +38,13 @@ contract RoundManager {
     mapping (address => Bid[]) internal _bidsPerStudent;
     uint256 internal studentsCount = 0;
 
-    constructor(TokensManager _tks, RolesManager _rls, SessionManager _ssm, CourseManager _crs) {
-        _tokensManager = _tks;
-        _rolesManager = _rls;
-        _sessionManager = _ssm;
-        _courseManager = _crs;
+    constructor(ChiefOperatingOfficer _coo) {
+        _COO = _coo;
+
+        _tokensManager = _COO.getTokensManager();
+        _rolesManager = _COO.getRolesManager();
+        _sessionManager = _COO.getSessionManager();
+        _courseManager = _COO.getCourseManager();
     }
 
     /**

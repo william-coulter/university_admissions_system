@@ -4,12 +4,13 @@ pragma solidity ^0.8.0;
 import "./RoundManager.sol";
 import "./RolesManager.sol";
 import "./CourseManager.sol";
+import "../Users/ChiefOperatingOfficer.sol";
 
 contract SessionManager {
 
     uint256 internal constant oneDay = 1 days;
     
-    address internal _COO;
+    ChiefOperatingOfficer internal _COO;
     RoundManager internal _currRound;
     RolesManager internal _rolesManager;
     TokensManager internal _tokensManager;
@@ -17,12 +18,14 @@ contract SessionManager {
 
     uint256 internal _deadline;
 
-    constructor(address _coo, RoundManager _rnd, RolesManager _rls, TokensManager _tks, CourseManager _crs) {
-        _currRound = _rnd;
-        _rolesManager = _rls;
-        _tokensManager = _tks;
-        _courseManager = _crs;
+    constructor(ChiefOperatingOfficer _coo) {
         _COO = _coo;
+
+        _currRound = newRound();
+        _rolesManager = _COO.getRolesManager();
+        _tokensManager = _COO.getTokensManager();
+        _courseManager = _COO.getCourseManager();
+        
         _deadline = block.timestamp + oneDay;
     }
 
@@ -31,7 +34,7 @@ contract SessionManager {
      */
     modifier requiresChiefOperatingOfficer {
         require(
-            msg.sender == _COO
+            msg.sender == address(_COO)
             , "Only the Chief Operating Officer can call this function"
         );
         _;
@@ -63,7 +66,7 @@ contract SessionManager {
      * Starts a new round.
      */
     function newRound() internal returns (RoundManager) {
-        return new RoundManager(_tokensManager, _rolesManager, this, _courseManager);
+        return new RoundManager(_COO);
     }
 
     /**

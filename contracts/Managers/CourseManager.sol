@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./SessionManager.sol";
 import "./RolesManager.sol";
+import "../Users/ChiefOperatingOfficer.sol";
 
 contract CourseManager {
 
@@ -13,7 +14,8 @@ contract CourseManager {
         address[] enrolled;
         uint8 UoC;
     }
-    
+
+    ChiefOperatingOfficer internal _COO;
     SessionManager internal _sessionManager;
     RolesManager internal _rolesManager;
 
@@ -22,9 +24,10 @@ contract CourseManager {
     mapping (string => Course) _courses;
     string[] _codes;
 
-    constructor(SessionManager _ssm, RolesManager _rls) {
-        _sessionManager = _ssm;
-        _rolesManager = _rls;
+    constructor(ChiefOperatingOfficer _coo) {
+        _COO = _coo;
+        _sessionManager = _COO.getSessionManager();
+        _rolesManager = _COO.getRolesManager();
     }
 
      /**

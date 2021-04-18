@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../Users/ChiefOperatingOfficer.sol";
+
 /**
  * The RolesManager is responsible for handling the permissions associated 
  * with each role. The RolesManager keeps track of which contracts have what role.
@@ -9,10 +11,11 @@ contract RolesManager {
     
     enum Roles {Unknown, Admin, Student, Revoked}
 
+    ChiefOperatingOfficer internal _COO;
+    
     mapping (address => Roles) internal _roles;
-    address internal _COO;
 
-    constructor(address _coo) {
+    constructor(ChiefOperatingOfficer _coo) {
        _COO = _coo;
     }
 
@@ -23,7 +26,7 @@ contract RolesManager {
         require(
             (_roles[msg.sender] != Roles.Unknown 
             || _roles[msg.sender] != Roles.Revoked
-            || msg.sender == _COO)
+            || msg.sender == address(_COO))
             , "Only a system user can call this function"
         );
         _;
@@ -44,7 +47,7 @@ contract RolesManager {
      * Authorizes the contract address to the supplied role
      */
     function authorize(address authorizee, Roles role) public requiresUser returns (address) {
-        if (authorizee == _COO) {
+        if (authorizee == address(_COO)) {
             require (
                 false
                 , "The Chief Operating Officer's permissions cannot be updated."
@@ -53,7 +56,7 @@ contract RolesManager {
 
         if (role == Roles.Admin) {
             require (
-                msg.sender == _COO
+                msg.sender == address(_COO)
                 , "Only the Chief Operating Officer can authorize an administrator."
             );
         }
@@ -68,7 +71,7 @@ contract RolesManager {
         if (role == Roles.Revoked) {
             // If the address being revoked is an admin, caller must be the COO
             require (
-                msg.sender == _COO
+                msg.sender == address(_COO)
                 , "Only the Chief Operating Officer can revoke permissions of an administrator."
             );
 
@@ -85,7 +88,7 @@ contract RolesManager {
         _roles[authorizee] = role;
 
         return address(0);
-        // TODO: create new contract and return address
+        // TODO: create new contract, set owner and return address
 
     }
 
