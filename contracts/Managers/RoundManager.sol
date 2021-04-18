@@ -6,6 +6,7 @@ import "./CourseManager.sol";
 import "./RolesManager.sol";
 import "./SessionManager.sol";
 import "../Users/ChiefOperatingOfficer.sol";
+import "../Users/Student.sol";
 
 /**
  *  The RoundManager is responsible for managing bids for the current round.
@@ -15,12 +16,12 @@ contract RoundManager {
     struct Bid {
         uint256 amount;
         CourseManager.Course course;
-        address student;
+        Student student;
         uint256 updated;
     }
 
     ChiefOperatingOfficer internal _COO;
-    
+
     TokensManager internal _tokensManager;
     RolesManager internal _rolesManager;
     SessionManager internal _sessionManager;
@@ -30,12 +31,12 @@ contract RoundManager {
     mapping (string => Bid[]) internal _bidsPerCourse;
     uint256 internal coursesCount = 0;
 
-    // Keeping track of all the courses we've added for iteration in 
+    // Keeping track of all the courses we've added for iteration in
     // 'executeRound' and 'getAllBids'
     string[] courses;
 
-    // Mapping from address(Student) to Bid. Also keeps track of the number of students.
-    mapping (address => Bid[]) internal _bidsPerStudent;
+    // Mapping from Student to Bid. Also keeps track of the number of students.
+    mapping (Student => Bid[]) internal _bidsPerStudent;
     uint256 internal studentsCount = 0;
 
     constructor(ChiefOperatingOfficer _coo) {
@@ -77,25 +78,33 @@ contract RoundManager {
      */
     function executeRound() public requiresSessionManager returns (bool) {
         // Flag to mark whether tokens were returned to students
-        bool tokensReturned = false;        
+        bool tokensReturned = false;
 
         for (uint256 i = 0; i < coursesCount; i++) {
 
             uint256 enrolledInCourse = _bidsPerCourse[courses[i]][0].course.enrolled.length;
-            address[] storage newEnrolment = _bidsPerCourse[courses[i]][0].course.enrolled;
+            Student[] storage newEnrolment = _bidsPerCourse[courses[i]][0].course.enrolled;
             uint16 courseQuota = _bidsPerCourse[courses[i]][0].course.quota;
 
             for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {
                 Bid memory currBid = _bidsPerCourse[courses[i]][j];
+                Student.Enrolment memory currEnrolment = Student.Enrolment(
+                    currBid.course.code,
+                    currBid.course.UoC
+                );
 
                 // Successful enrolment
                 if (enrolledInCourse < courseQuota) {
 
                     // enrol the student
                     newEnrolment.push(currBid.student);
+                    currBid.student.bidSuccessful(currEnrolment);
 
                     // transfer allowance back to tokens manager
-                    _tokensManager.transferFrom(address(this), address(_tokensManager), currBid.amount);
+                    require(
+                        _tokensManager.transferFrom(address(this), address(_tokensManager), currBid.amount)
+                        , "RoundManager: Could not transfer tokens back to the TokensManager"
+                    );
 
                     // destroy the tokens
                     _tokensManager.destroyTokens(currBid.amount);
@@ -104,9 +113,15 @@ contract RoundManager {
                 } else {
                     // return tokens to the student
                     tokensReturned = true;
-                    _tokensManager.transferFrom(address(this), currBid.student, currBid.amount);
+                    currBid.student.bidUnsuccessful(currEnrolment);
+                    
+                    require(
+                        _tokensManager.transferFrom(address(this), address(currBid.student), currBid.amount)
+                        , "RoundManager: Could not transfer tokens back to the Student"
+                    );
+                    
                 }
-            }   
+            }
 
             // set the new enrolment for the course
             _courseManager.setEnrolment(_bidsPerCourse[courses[i]][0].course.code, newEnrolment);
@@ -125,7 +140,7 @@ contract RoundManager {
             studentsCount++;
         }
         _bidsPerStudent[bid.student].push(bid);
-        
+
         // First ever bid for the course
         if (_bidsPerCourse[bid.course.code].length == 0) {
             coursesCount++;
@@ -165,12 +180,12 @@ contract RoundManager {
         }
     }
 
-    function alterBid(string memory code, address student, Bid memory newBid) public requiresStudent {
+    function alterBid(string memory code, Student student, Bid memory newBid) public requiresStudent {
         bool updated1 = false;
         bool updated2 = false;
 
         for (uint256 i; i < _bidsPerCourse[code].length; i++) {
-            if (_bidsPerCourse[code][i].student == student) {
+            if (address(_bidsPerCourse[code][i].student) == address(student)) {
                 _bidsPerCourse[code][i] = newBid;
                 updated1 = true;
                 break;
@@ -192,13 +207,13 @@ contract RoundManager {
         );
     }
 
-    function removeBid(string memory code, address student) public requiresStudent {
-        // Does not decrement counters in this contract. This function isn't tested anyway haha 
+    function removeBid(string memory code, Student student) public requiresStudent {
+        // Does not decrement counters in this contract. This function isn't tested anyway haha
         bool deleted1 = false;
         bool deleted2 = false;
 
         for (uint256 i; i < _bidsPerCourse[code].length; i++) {
-            if (_bidsPerCourse[code][i].student == student) {
+            if (address(_bidsPerCourse[code][i].student) == address(student)) {
                 // "delete" just sets this to the default value
                 delete _bidsPerCourse[code][i];
                 deleted1 = true;
@@ -225,11 +240,11 @@ contract RoundManager {
     function seeAllBids() public view requiresStudent returns (Bid[] memory){
         Bid[] memory ret = new Bid[](coursesCount);
         for (uint256 i = 0; i < coursesCount; i++) {
-            for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {                
+            for (uint256 j = 0; j < _bidsPerCourse[courses[i]].length; j++) {
                 ret[i] = _bidsPerCourse[courses[i]][j];
-            }   
+            }
         }
-        
+
         return ret;
     }
 

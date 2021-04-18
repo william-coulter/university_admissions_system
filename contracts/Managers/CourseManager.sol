@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./SessionManager.sol";
 import "./RolesManager.sol";
 import "../Users/ChiefOperatingOfficer.sol";
+import "../Users/Student.sol";
 
 contract CourseManager {
 
@@ -11,7 +12,7 @@ contract CourseManager {
         string code;
         string name;
         uint16 quota;
-        address[] enrolled;
+        Student[] enrolled;
         uint8 UoC;
     }
 
@@ -82,7 +83,7 @@ contract CourseManager {
     /**
      * The provided course code should always exist, but there is a check anyway
      */
-    function setEnrolment(string memory course, address[] memory newEnrolment) public requiresRoundManager {
+    function setEnrolment(string memory course, Student[] memory newEnrolment) public requiresRoundManager {
         require(
             keccak256(bytes(_courses[course].code)) != keccak256(bytes(""))
             , "Provided course does not exist"

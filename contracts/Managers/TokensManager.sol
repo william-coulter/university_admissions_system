@@ -7,9 +7,12 @@ import "./RoundManager.sol";
 import "../Users/ChiefOperatingOfficer.sol";
 
 /**
- *
+ * The TokensManager is responsible for managing student payments and allocating them tokens
+ * to bid on course enrolments. The TokensManager implements inherits from the ERC20 contract
  */
 contract TokensManager is ERC20 {
+
+    uint256 internal constant _tokensPerUoC = 100;
 
     ChiefOperatingOfficer internal _COO;
 
@@ -18,7 +21,9 @@ contract TokensManager is ERC20 {
 
     constructor(uint256 initialSupply, ChiefOperatingOfficer _coo) ERC20("AdmissionTokens", "AT") {
         _mint(msg.sender, initialSupply);
-        
+
+        _COO = _coo;
+
         _roundManager = _COO.getRoundManager();
         _rolesManager = _COO.getRolesManager();
     }
@@ -37,12 +42,23 @@ contract TokensManager is ERC20 {
     }
 
     /**
-     * Approve a student to send tokens. TODO: Must receive Wei
+     * Receives Wei and approves student to spend according to their desired UoC.
      */
-    function approve(address spender, uint256 amount) public virtual override requiresStudent returns (bool) {
-        return super.approve(spender, amount);
-    }
+    function purchaseUoC(address spender, uint8 UoC) public payable virtual requiresStudent returns (bool) {
+        uint256 requiredWei = UoC * _COO.getFee();
 
+        require(
+            msg.value >= requiredWei
+            , "TokensManager: Not enough Wei sent to purchase UoC"
+        );
+
+        require(
+            msg.value == requiredWei
+            , "TokensManager: Too much Wei sent to purchase UoC"
+        );
+
+        return super.approve(spender, _tokensPerUoC * UoC);
+    }
 
     /**
      * Transfers token allowance from the sender to the recipient.
