@@ -7,17 +7,18 @@ import "../Users/Student.sol";
 import "../Factories/UserFactory.sol";
 
 /**
- * The RolesManager is responsible for handling the permissions associated 
+ * The RolesManager is responsible for handling the permissions associated
  * with each role. The RolesManager keeps track of which contracts have what role.
  */
 contract RolesManager {
-    
+
     enum Roles {Unknown, Admin, Student, Revoked}
 
     address internal _COO;
     address internal _userFactory;
-    
+
     // Initially all values in mapping are set to "Unknown"
+    // "address" is the contract address, which can only be called by its owner
     mapping (address => Roles) internal _roles;
 
     constructor(address _coo, address userFactory) {
@@ -30,7 +31,7 @@ contract RolesManager {
      */
     modifier requiresUser {
         require(
-            (_roles[msg.sender] != Roles.Unknown 
+            (_roles[msg.sender] != Roles.Unknown
             || _roles[msg.sender] != Roles.Revoked
             || msg.sender == address(_COO))
             , "Only a system user can call this function"
@@ -91,12 +92,15 @@ contract RolesManager {
         }
 
         // passed all checks, now we can authorize
-        _roles[authorizee] = role;
         if (role == Roles.Admin) {
-            return UserFactory(_userFactory).createAdmin(authorizee);            
+            address admin = UserFactory(_userFactory).createAdmin(authorizee);
+            _roles[admin] = role;
+            return admin;
         } else {
-            return UserFactory(_userFactory).createStudent(authorizee);
-        }       
+            address student = UserFactory(_userFactory).createStudent(authorizee);
+            _roles[student] = role;
+            return student;
+        }
     }
 
     /**

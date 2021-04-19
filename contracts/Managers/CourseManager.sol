@@ -19,7 +19,7 @@ contract CourseManager {
     ManagerFactory internal _manager;
 
     // mapping from course codes to their courses, keeping
-    // track of all the course codes added.\
+    // track of all the course codes added.
     mapping (string => Course) _courses;
     string[] _codes;
 
@@ -55,11 +55,6 @@ contract CourseManager {
      * Adds a course to the _courses mapping. Requires that the course did not previously exist
      */
     function addCourse(Course memory course) public requiresAdmin {
-        require(
-            !courseExists(course.code)
-            , "Course already exists"
-        );
-
         _courses[course.code] = course;
         _codes.push(course.code);
     }
@@ -91,7 +86,7 @@ contract CourseManager {
     /**
      * Returns true if the course exists.
      */
-    function courseExists(string memory code) internal view returns (bool) {
+    function courseExists(string memory code) public view returns (bool) {
         return keccak256(bytes(_courses[code].code)) != keccak256(bytes(""));
     }
 

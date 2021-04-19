@@ -6,6 +6,9 @@ import "../Managers/CourseManager.sol";
 
 contract Administrator {
 
+    event AuthorizedStudent(address student);
+    event CreatedCourse(string code);
+
     address internal _manager;
     address internal _owner;
 
@@ -29,7 +32,9 @@ contract Administrator {
      * Admits a student. Returns the address of the newly deployed Student contract.
      */
     function admitStudent(address student) public requiresOwner returns (address) {
-        return ManagerFactory(_manager).getRolesManager().authorize(student, RolesManager.Roles.Student);
+        address studentContract = ManagerFactory(_manager).getRolesManager().authorize(student, RolesManager.Roles.Student);
+        emit AuthorizedStudent(studentContract);
+        return studentContract;
     }
 
     /**
@@ -43,7 +48,13 @@ contract Administrator {
      * Creates a course
      */
     function createCourse(CourseManager.Course memory course) public requiresOwner {
+        require(
+            !ManagerFactory(_manager).getCourseManager().courseExists(course.code)
+            , "Administrator: Course already exists"
+        );
+
         ManagerFactory(_manager).getCourseManager().addCourse(course);
+        emit CreatedCourse(course.code);
     }
 
     /**

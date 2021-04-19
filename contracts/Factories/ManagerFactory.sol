@@ -32,7 +32,7 @@ contract ManagerFactory {
      */
     modifier requiresCOO {
         require(
-            msg.sender == _coo
+            msg.sender == ChiefOperatingOfficer(_coo).getOwner()
             , "Only the Chief Operating Officer can call this function"
         );
         _;
@@ -40,7 +40,6 @@ contract ManagerFactory {
 
     /**
      * Set all the managers
-     *
      */
     function setTokensManager(TokensManager tks) public requiresCOO {
         _tokensManager = address(tks);

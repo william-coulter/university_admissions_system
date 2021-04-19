@@ -44,7 +44,7 @@ contract TokensManager is ERC20 {
     /**
      * Receives Wei and approves student to spend according to their desired UoC.
      */
-    function purchaseUoC(address spender, uint8 UoC) public payable virtual requiresStudent returns (bool) {
+    function purchaseUoC(address spender, uint8 UoC) external payable requiresStudent returns (bool) {
         uint256 requiredWei = UoC * ChiefOperatingOfficer(_COO).getFee();
 
         require(

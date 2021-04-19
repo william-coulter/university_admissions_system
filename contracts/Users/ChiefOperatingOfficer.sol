@@ -6,6 +6,15 @@ import "../Factories/UserFactory.sol";
 
 contract ChiefOperatingOfficer {
 
+    /**
+     * Events
+     */
+    event SessionStarted();
+    event AuthorizedAdmin(address admin);
+
+    /*
+     * Internal parameters
+     */
     address internal _managerFactory;
     address internal _userFactory;
 
@@ -13,6 +22,9 @@ contract ChiefOperatingOfficer {
     uint256 internal _tokenFee = 100;
     bool internal _sessionStarted = false;
 
+    /**
+     * Constructor
+     */
     constructor() {
         _owner = msg.sender;
     }
@@ -53,6 +65,8 @@ contract ChiefOperatingOfficer {
         // Set factories
         _managerFactory = address(manager);
         _userFactory = address(user);
+
+        emit SessionStarted();
     }
 
     /**
@@ -63,10 +77,19 @@ contract ChiefOperatingOfficer {
     }
 
     /**
+     * Changes the owner of the COO
+     */
+    function getOwner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
      * Authorizes and admin
      */
     function authorizeAdmin(address admin) public requiresOwner requireSessionStart returns (address) {
-        return ManagerFactory(_managerFactory).getRolesManager().authorize(admin, RolesManager.Roles.Admin);
+        address adminContractAddress = ManagerFactory(_managerFactory).getRolesManager().authorize(admin, RolesManager.Roles.Admin);
+        emit AuthorizedAdmin(adminContractAddress);
+        return adminContractAddress;
     }
 
     /**
@@ -88,5 +111,12 @@ contract ChiefOperatingOfficer {
      */
     function getFee() public view returns (uint256) {
         return _tokenFee;
+    }
+
+    /**
+     * Gets university tokens
+     */
+    function getUniversityBalance() external view returns (uint256) {
+        return ManagerFactory(_managerFactory).getTokensManager().totalSupply();
     }
 }

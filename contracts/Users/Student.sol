@@ -7,6 +7,11 @@ import "../Managers/CourseManager.sol";
 
 contract Student {
 
+    /**
+     * Events
+     */
+    event PurhcasedUoC(address owner, uint8 UoC);
+
     struct Enrolment {
         string code;
         uint8 UoC;
@@ -56,8 +61,8 @@ contract Student {
     /**
      * Purchases a desired amount of UoC
      */
-    function purchaseUoC(uint8 desiredUoC, uint256 amount) public requiresOwner {
-        bool response = ManagerFactory(_manager).getTokensManager().purchaseUoC{value: amount}(address(this), desiredUoC);
+    function purchaseUoC(uint8 desiredUoC) external payable requiresOwner {
+        bool response = ManagerFactory(_manager).getTokensManager().purchaseUoC{value: msg.value}(address(this), desiredUoC);
 
         require(
             response
@@ -65,6 +70,7 @@ contract Student {
         );
 
         _purchasedUoC += desiredUoC;
+        emit PurhcasedUoC(_owner, desiredUoC);
     }
 
     /**
