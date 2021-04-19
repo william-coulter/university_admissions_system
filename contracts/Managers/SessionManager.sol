@@ -5,27 +5,22 @@ import "./RoundManager.sol";
 import "./RolesManager.sol";
 import "./CourseManager.sol";
 import "../Users/ChiefOperatingOfficer.sol";
+import "../Factories/ManagerFactory.sol";
 
 contract SessionManager {
 
     uint256 internal constant oneDay = 1 days;
-    
-    ChiefOperatingOfficer internal _COO;
-    RoundManager internal _currRound;
-    RolesManager internal _rolesManager;
-    TokensManager internal _tokensManager;
-    CourseManager internal _courseManager;
+
+    address internal _manager;
+    ChiefOperatingOfficer _COO;
+    RoundManager _currRound;
 
     uint256 internal _deadline;
 
-    constructor(ChiefOperatingOfficer _coo) {
-        _COO = _coo;
-
+    constructor(address coo, ManagerFactory manager) {
+        _COO = ChiefOperatingOfficer(coo);
+        _manager = address(manager);
         _currRound = newRound();
-        _rolesManager = _COO.getRolesManager();
-        _tokensManager = _COO.getTokensManager();
-        _courseManager = _COO.getCourseManager();
-        
         _deadline = block.timestamp + oneDay;
     }
 
@@ -45,7 +40,7 @@ contract SessionManager {
      */
     modifier requiresAdmin {
         require(
-            _rolesManager.hasRole(msg.sender, RolesManager.Roles.Admin)
+            ManagerFactory(_manager).getRolesManager().hasRole(msg.sender, RolesManager.Roles.Admin)
             , "Only an admin can call this function"
         );
         _;
@@ -56,7 +51,7 @@ contract SessionManager {
      */
     modifier requiresStudent {
         require(
-            _rolesManager.hasRole(msg.sender, RolesManager.Roles.Student)
+            ManagerFactory(_manager).getRolesManager().hasRole(msg.sender, RolesManager.Roles.Student)
             , "Only a student can call this function"
         );
         _;
@@ -66,7 +61,7 @@ contract SessionManager {
      * Starts a new round.
      */
     function newRound() internal returns (RoundManager) {
-        return new RoundManager(_COO);
+        return new RoundManager(ManagerFactory(_manager));
     }
 
     /**
@@ -77,7 +72,7 @@ contract SessionManager {
     function executeRound() public requiresChiefOperatingOfficer returns (bool) {
         require(
             block.timestamp > _deadline
-            , "Cannot execute round since deadline is not reached" 
+            , "Cannot execute round since deadline is not reached"
         );
 
         bool startNewRound = _currRound.executeRound();

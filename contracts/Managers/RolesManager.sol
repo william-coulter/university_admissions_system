@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "../Users/ChiefOperatingOfficer.sol";
 import "../Users/Administrator.sol";
 import "../Users/Student.sol";
+import "../Factories/UserFactory.sol";
 
 /**
  * The RolesManager is responsible for handling the permissions associated 
@@ -13,13 +14,15 @@ contract RolesManager {
     
     enum Roles {Unknown, Admin, Student, Revoked}
 
-    ChiefOperatingOfficer internal _COO;
+    address internal _COO;
+    address internal _userFactory;
     
     // Initially all values in mapping are set to "Unknown"
     mapping (address => Roles) internal _roles;
 
-    constructor(ChiefOperatingOfficer _coo) {
+    constructor(address _coo, address userFactory) {
        _COO = _coo;
+       _userFactory = userFactory;
     }
 
     /**
@@ -90,9 +93,9 @@ contract RolesManager {
         // passed all checks, now we can authorize
         _roles[authorizee] = role;
         if (role == Roles.Admin) {
-            return address(new Administrator(_COO, authorizee));
+            return UserFactory(_userFactory).createAdmin(authorizee);            
         } else {
-            return address(new Student(_COO, authorizee));
+            return UserFactory(_userFactory).createStudent(authorizee);
         }       
     }
 

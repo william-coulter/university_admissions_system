@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "./SessionManager.sol";
+import "../Factories/ManagerFactory.sol";
 import "./RolesManager.sol";
-import "../Users/ChiefOperatingOfficer.sol";
 import "../Users/Student.sol";
 
 contract CourseManager {
@@ -16,26 +16,22 @@ contract CourseManager {
         uint8 UoC;
     }
 
-    ChiefOperatingOfficer internal _COO;
-    SessionManager internal _sessionManager;
-    RolesManager internal _rolesManager;
+    ManagerFactory internal _manager;
 
     // mapping from course codes to their courses, keeping
     // track of all the course codes added.\
     mapping (string => Course) _courses;
     string[] _codes;
 
-    constructor(ChiefOperatingOfficer _coo) {
-        _COO = _coo;
-        _sessionManager = _COO.getSessionManager();
-        _rolesManager = _COO.getRolesManager();
+    constructor(ManagerFactory manager) {
+        _manager = manager;
     }
 
      /**
      * Requires that the sender is the Round Manager
      */
     modifier requiresRoundManager {
-        RoundManager roundManager = _sessionManager.getCurrRound();
+        RoundManager roundManager = _manager.getSessionManager().getCurrRound();
 
         require(
             msg.sender == address(roundManager)
@@ -47,9 +43,9 @@ contract CourseManager {
     /**
      * Requires that the sender is an admin
      */
-    modifier requiresAdmin {        
+    modifier requiresAdmin {
         require(
-            _rolesManager.hasRole(msg.sender, RolesManager.Roles.Admin)
+            _manager.getRolesManager().hasRole(msg.sender, RolesManager.Roles.Admin)
             , "Only the round manager can call this function"
         );
         _;

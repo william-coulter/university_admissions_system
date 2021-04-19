@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../Factories/ManagerFactory.sol";
 import "../Managers/RoundManager.sol";
 import "../Managers/CourseManager.sol";
-import "../Managers/TokensManager.sol";
-import "./ChiefOperatingOfficer.sol";
 
 contract Student {
 
@@ -13,24 +12,16 @@ contract Student {
         uint8 UoC;
     }
 
-    ChiefOperatingOfficer _COO;
- 
-    CourseManager internal _courseManager;    
-    TokensManager internal _tokensManager;
-    RoundManager internal _roundManager;
+    address internal _manager;
 
     address internal _owner;
     uint8 internal _purchasedUoC = 0;
     RoundManager.Bid[] _pendingBids;
     Enrolment[] _enrolments;
 
-    constructor(ChiefOperatingOfficer _coo, address owner) {
+    constructor(address manager, address owner) {
+        _manager = manager;
         _owner = owner;
-        _COO = _coo;
-        
-        _courseManager = _COO.getCourseManager();        
-        _tokensManager = _COO.getTokensManager();
-        _roundManager = _COO.getRoundManager();
     }
 
     /**
@@ -49,7 +40,7 @@ contract Student {
      */
     modifier requiresRoundManager {
         require(
-            msg.sender == _owner
+            msg.sender == address(ManagerFactory(_manager).getRoundManager())
             , "Student: Only the Round Manager can call this function"
         );
         _;
@@ -59,14 +50,14 @@ contract Student {
      * Gets the student allowance
      */
     function getAllowance() internal view returns (uint256) {
-        return _tokensManager.allowance(address(_tokensManager), address(this));
+        return ManagerFactory(_manager).getTokensManager().allowance(address(ManagerFactory(_manager).getTokensManager()), address(this));
     }
 
     /**
      * Purchases a desired amount of UoC
      */
     function purchaseUoC(uint8 desiredUoC, uint256 amount) public requiresOwner {
-        bool response = _tokensManager.purchaseUoC{value: amount}(address(this), desiredUoC);
+        bool response = ManagerFactory(_manager).getTokensManager().purchaseUoC{value: amount}(address(this), desiredUoC);
 
         require(
             response
@@ -84,7 +75,7 @@ contract Student {
         RoundManager.Bid memory newBid = createBid(code, amount);
 
         require(
-            _tokensManager.transferFrom(address(this), address(_roundManager), newBid.amount)
+            ManagerFactory(_manager).getTokensManager().transferFrom(address(this), address(ManagerFactory(_manager).getRoundManager()), newBid.amount)
             , "Student: Could not transfer allowance to RoundManager to add a bid"
         );
 
@@ -106,7 +97,6 @@ contract Student {
                 isExistingBid = true;
                 currBid = _pendingBids[i];
                 delete _pendingBids[i];
-                _roundManager.removeBid(currBid.course.code, this);
 
                 break;
             }
@@ -118,7 +108,7 @@ contract Student {
         );
 
         // Transfers allowance back from the RoundManager back to the Student
-        _roundManager.removeBid(code, this);
+        ManagerFactory(_manager).getRoundManager().removeBid(code, this);
         addBid(code, newAmount);
     }
 
@@ -144,14 +134,14 @@ contract Student {
             , "Student: Bid to delete does not exist"
         );
 
-        _roundManager.removeBid(code, this);
+        ManagerFactory(_manager).getRoundManager().removeBid(code, this);
     }
 
     /**
      * Transfers tokens to another student
      */
     function transfer(uint256 amount, Student student) public requiresOwner {
-        _tokensManager.transferToStudent(address(student), amount);
+        ManagerFactory(_manager).getTokensManager().transferToStudent(address(student), amount);
     }
 
     /**
@@ -159,7 +149,7 @@ contract Student {
      */
     function createBid(string memory code, uint256 amount) internal view requiresOwner returns (RoundManager.Bid memory) {
         // This method checks that the course exists
-        CourseManager.Course memory course = _courseManager.getCourse(code);
+        CourseManager.Course memory course = ManagerFactory(_manager).getCourseManager().getCourse(code);
         RoundManager.Bid memory newBid = RoundManager.Bid(amount, course, this, block.timestamp);
 
         // check allowance

@@ -7,6 +7,7 @@ import "./RolesManager.sol";
 import "./SessionManager.sol";
 import "../Users/ChiefOperatingOfficer.sol";
 import "../Users/Student.sol";
+import "../Factories/ManagerFactory.sol";
 
 /**
  *  The RoundManager is responsible for managing bids for the current round.
@@ -19,13 +20,8 @@ contract RoundManager {
         Student student;
         uint256 updated;
     }
-
-    ChiefOperatingOfficer internal _COO;
-
-    TokensManager internal _tokensManager;
-    RolesManager internal _rolesManager;
-    SessionManager internal _sessionManager;
-    CourseManager internal _courseManager;
+    
+    address internal _manager;   
 
     // Mapping from Course.code to Bid. Also keeps track of the number of courses.
     mapping (string => Bid[]) internal _bidsPerCourse;
@@ -39,13 +35,8 @@ contract RoundManager {
     mapping (Student => Bid[]) internal _bidsPerStudent;
     uint256 internal studentsCount = 0;
 
-    constructor(ChiefOperatingOfficer _coo) {
-        _COO = _coo;
-
-        _tokensManager = _COO.getTokensManager();
-        _rolesManager = _COO.getRolesManager();
-        _sessionManager = _COO.getSessionManager();
-        _courseManager = _COO.getCourseManager();
+    constructor(ManagerFactory manager) {
+        _manager = address(manager);
     }
 
     /**
@@ -54,7 +45,7 @@ contract RoundManager {
      */
     modifier requiresSessionManager {
         require(
-            msg.sender == address(_sessionManager)
+            msg.sender == address(ManagerFactory(_manager).getSessionManager())
             , "Only the session manager can call this function"
         );
         _;
@@ -65,7 +56,7 @@ contract RoundManager {
      */
     modifier requiresStudent {
         require(
-            _rolesManager.hasRole(msg.sender, RolesManager.Roles.Student)
+            ManagerFactory(_manager).getRolesManager().hasRole(msg.sender, RolesManager.Roles.Student)
             , "Only an authorize student can call this function"
         );
         _;
@@ -102,12 +93,16 @@ contract RoundManager {
 
                     // transfer allowance back to tokens manager
                     require(
-                        _tokensManager.transferFrom(address(this), address(_tokensManager), currBid.amount)
+                        ManagerFactory(_manager).getTokensManager().transferFrom(
+                            address(this), 
+                            address(ManagerFactory(_manager).getTokensManager()), 
+                            currBid.amount
+                        )
                         , "RoundManager: Could not transfer tokens back to the TokensManager"
                     );
 
                     // destroy the tokens
-                    _tokensManager.destroyTokens(currBid.amount);
+                    ManagerFactory(_manager).getTokensManager().destroyTokens(currBid.amount);
 
                 // Student missed out
                 } else {
@@ -116,7 +111,7 @@ contract RoundManager {
                     currBid.student.bidUnsuccessful(currEnrolment);
                     
                     require(
-                        _tokensManager.transferFrom(address(this), address(currBid.student), currBid.amount)
+                        ManagerFactory(_manager).getTokensManager().transferFrom(address(this), address(currBid.student), currBid.amount)
                         , "RoundManager: Could not transfer tokens back to the Student"
                     );
                     
@@ -124,7 +119,7 @@ contract RoundManager {
             }
 
             // set the new enrolment for the course
-            _courseManager.setEnrolment(_bidsPerCourse[courses[i]][0].course.code, newEnrolment);
+            ManagerFactory(_manager).getCourseManager().setEnrolment(_bidsPerCourse[courses[i]][0].course.code, newEnrolment);
 
             // next course
         }
@@ -240,7 +235,7 @@ contract RoundManager {
             , "Could not remove bid"
         );
 
-        _tokensManager.transferFrom(address(this), address(student), amount);
+        ManagerFactory(_manager).getTokensManager().transferFrom(address(this), address(student), amount);
     }
 
     function seeAllBids() public view requiresStudent returns (Bid[] memory){
@@ -260,8 +255,12 @@ contract RoundManager {
      * Returns any hanging tokens (there shouldn't be any) back to the tokens manager
      */
     function kill() public requiresSessionManager {
-        uint256 remainingTokens = _tokensManager.allowance(address(_tokensManager), address(this));
-        _tokensManager.transferFrom(address(this), address(_tokensManager), remainingTokens);
+        uint256 remainingTokens = ManagerFactory(_manager).getTokensManager().allowance(address(ManagerFactory(_manager).getTokensManager()), address(this));
+        ManagerFactory(_manager).getTokensManager().transferFrom(
+            address(this), 
+            address(ManagerFactory(_manager).getTokensManager()), 
+            remainingTokens
+        );
 
         selfdestruct(payable(address(this)));
     }

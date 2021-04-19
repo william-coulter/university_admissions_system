@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./RolesManager.sol";
 import "./RoundManager.sol";
+import "../Factories/ManagerFactory.sol";
 import "../Users/ChiefOperatingOfficer.sol";
 
 /**
@@ -14,28 +15,27 @@ contract TokensManager is ERC20 {
 
     uint256 internal constant _tokensPerUoC = 100;
 
-    ChiefOperatingOfficer internal _COO;
+    address _COO;
+    address internal _manager;
 
-    RoundManager internal _roundManager;
-    RolesManager internal _rolesManager;
-
-    constructor(uint256 initialSupply, ChiefOperatingOfficer _coo) ERC20("AdmissionTokens", "AT") {
+    constructor(uint256 initialSupply, address manager, address coo) ERC20("AdmissionTokens", "AT") {
         _mint(msg.sender, initialSupply);
 
-        _COO = _coo;
-
-        _roundManager = _COO.getRoundManager();
-        _rolesManager = _COO.getRolesManager();
+        _manager = manager;
+        _COO = coo;
     }
 
     modifier requiresRoundManager {
-        require (msg.sender == address(_roundManager), "Only RoundManager can call this function.");
+        require (
+            msg.sender == address(ManagerFactory(_manager).getRoundManager()),
+            "Only RoundManager can call this function."
+        );
         _;
     }
 
     modifier requiresStudent {
         require (
-            _rolesManager.hasRole(msg.sender, RolesManager.Roles.Student)
+            ManagerFactory(_manager).getRolesManager().hasRole(msg.sender, RolesManager.Roles.Student)
             , "Only a student can call this function."
         );
         _;
@@ -45,7 +45,7 @@ contract TokensManager is ERC20 {
      * Receives Wei and approves student to spend according to their desired UoC.
      */
     function purchaseUoC(address spender, uint8 UoC) public payable virtual requiresStudent returns (bool) {
-        uint256 requiredWei = UoC * _COO.getFee();
+        uint256 requiredWei = UoC * ChiefOperatingOfficer(_COO).getFee();
 
         require(
             msg.value >= requiredWei
@@ -68,7 +68,7 @@ contract TokensManager is ERC20 {
      */
     function transferToStudent(address recipient, uint256 amount) public requiresStudent returns (bool) {
         require(
-            _rolesManager.hasRole(recipient, RolesManager.Roles.Student)
+            ManagerFactory(_manager).getRolesManager().hasRole(recipient, RolesManager.Roles.Student)
             , "Recipient must be a student"
         );
 

@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../Managers/TokensManager.sol";
-import "../Managers/RolesManager.sol";
-import "../Managers/SessionManager.sol";
-import "../Managers/RoundManager.sol";
-import "../Managers/CourseManager.sol";
+import "../Factories/ManagerFactory.sol";
+import "../Factories/UserFactory.sol";
 
 contract ChiefOperatingOfficer {
 
-    // The COO deploys all the managers
-    TokensManager internal _tokensManager;
-    RolesManager internal _rolesManager;
-    SessionManager internal _sessionManager;
-    CourseManager internal _courseManager;
+    address internal _managerFactory;
+    address internal _userFactory;
 
     address internal _owner;
-    uint256 internal _tokenFee;
+    uint256 internal _tokenFee = 100;
+    bool internal _sessionStarted = false;
 
     constructor() {
         _owner = msg.sender;
@@ -34,19 +29,30 @@ contract ChiefOperatingOfficer {
     }
 
     /**
+     * Requires that the session has started
+     */
+    modifier requireSessionStart {
+        require(
+            _sessionStarted
+            , "Session has not started"
+        );
+        _;
+    }
+
+    /**
      * Starts the session
      */
-    function startSession() public requiresOwner {
+    function startSession(ManagerFactory manager, UserFactory user) public requiresOwner {        
         require(
-            address(_sessionManager) == address(0)
+            !_sessionStarted
             , "Session has already started"
         );
 
-        // Deploy all of the managers
-        _tokensManager = new TokensManager(5 * 18 * 1000, this);
-        _rolesManager = new RolesManager(this);
-        _sessionManager = new SessionManager(this);
-        _courseManager = new CourseManager(this);
+        _sessionStarted = true;
+
+        // Set factories
+        _managerFactory = address(manager);
+        _userFactory = address(user);
     }
 
     /**
@@ -59,8 +65,8 @@ contract ChiefOperatingOfficer {
     /**
      * Authorizes and admin
      */
-    function authorizeAdmin(address admin) public requiresOwner returns (address) {
-        return _rolesManager.authorize(admin, RolesManager.Roles.Admin);
+    function authorizeAdmin(address admin) public requiresOwner requireSessionStart returns (address) {
+        return ManagerFactory(_managerFactory).getRolesManager().authorize(admin, RolesManager.Roles.Admin);
     }
 
     /**
@@ -82,30 +88,5 @@ contract ChiefOperatingOfficer {
      */
     function getFee() public view returns (uint256) {
         return _tokenFee;
-    }
-
-    /**
-     * Getters for the Managers
-     *
-     * Anyone can call these getters but all methods on the managers are permissioned
-     */
-    function getTokensManager() public view returns (TokensManager) {
-        return _tokensManager;
-    }
-
-    function getRolesManager() public view returns (RolesManager) {
-        return _rolesManager;
-    }
-
-    function getSessionManager() public view returns (SessionManager) {
-        return _sessionManager;
-    }
-
-    function getRoundManager() public view returns (RoundManager) {
-        return _sessionManager.getCurrRound();
-    }
-
-    function getCourseManager() public view returns (CourseManager) {
-        return _courseManager;
     }
 }
