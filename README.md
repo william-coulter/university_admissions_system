@@ -13,10 +13,12 @@ For COMP6451 Ethereum Programming assignment.
 
 # Tests
 
-First deploy the chain: `make deploy-chain`
-And then run the tests: `make test`
+First deploy the chain: `make deploy-chain`.
+This will deploy a `ganache` instance listening on `localhost:8545`.
 
-This will perform an `npm install` and make sure all of the contracts have been compiled and deployed. All the tests in the `/test` directory will run.
+Run the tests with: `make test`
+This will perform an `npm install` and make sure all of the contracts have been compiled and deployed. 
+All the tests in the `/test` directory will run.
 
 See `Makefile` for more commands.
 
