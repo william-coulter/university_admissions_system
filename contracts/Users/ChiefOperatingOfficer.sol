@@ -100,13 +100,6 @@ contract ChiefOperatingOfficer {
     }
 
     /**
-     * TODO: Transfers the Wei out of the system
-     */
-    function transferOutOfSystem(/*uint256 amount*/) public view requiresOwner {
-        return;
-    }
-
-    /**
      * Sets token fee for the session
      */
     function setFee(uint256 newFee) public requiresOwner {
