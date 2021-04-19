@@ -4,13 +4,19 @@ A set of smart contracts which can be used by a university to handle course enro
 
 For COMP6451 Ethereum Programming assignment.
 
-# Dependencies
- - `npm`
- - `make`
- - `truffle`: `npm install -g truffle`
- - `ganache-cli`: `npm install -g ganache-cli`
+# Dependencies (and versions)
+ - `npm`: 6.14.4
+ - `node`: v14.16.1
+ - `make`: 3.81
+ - `truffle`: `npm install -g truffle@v5.1.65`: v5.1.65
+ - `ganache-cli`: `npm install -g ganache-cli`: v6.12.2
 
-# Commands
+# Tests
 
-See `Makefile` for available commands.
+First deploy the chain: `make deploy-chain`
+And then run the tests: `make test`
+
+This will perform an `npm install` and make sure all of the contracts have been compiled and deployed. All the tests in the `/test` directory will run.
+
+See `Makefile` for more commands.
 
