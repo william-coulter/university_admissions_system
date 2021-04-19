@@ -117,6 +117,26 @@ contract ChiefOperatingOfficer {
      * Gets university tokens
      */
     function getUniversityBalance() external view returns (uint256) {
-        return ManagerFactory(_managerFactory).getTokensManager().totalSupply();
+        return ManagerFactory(_managerFactory).getTokensManager().balanceOf(address(this));
+    }
+
+    /**
+     * TODO: This should be restricted to students only
+     */
+    function purchaseUoC(address spender, uint8 UoC) public payable requireSessionStart returns (bool) {
+        uint256 UoCFee = getFee();
+        uint256 requiredWei = UoC * UoCFee;
+
+        require(
+            msg.value >= requiredWei
+            , "TokensManager: Not enough Wei sent to purchase UoC"
+        );
+
+        require(
+            msg.value == requiredWei
+            , "TokensManager: Too much Wei sent to purchase UoC"
+        );
+
+        return ManagerFactory(_managerFactory).getTokensManager().approve(spender, UoC * UoCFee);
     }
 }

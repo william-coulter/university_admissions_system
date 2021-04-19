@@ -13,16 +13,23 @@ import "../Users/ChiefOperatingOfficer.sol";
  */
 contract TokensManager is ERC20 {
 
-    uint256 internal constant _tokensPerUoC = 100;
-
     address _COO;
     address internal _manager;
 
     constructor(uint256 initialSupply, address manager, address coo) ERC20("AdmissionTokens", "AT") {
-        _mint(msg.sender, initialSupply);
+        // The COO owns all the tokens
+        _mint(coo, initialSupply);
 
         _manager = manager;
         _COO = coo;
+    }
+
+    modifier requiresCOO {
+        require (
+            msg.sender == _COO,
+            "Only the Chief Operating Officer can call this function."
+        );
+        _;
     }
 
     modifier requiresRoundManager {
@@ -42,22 +49,10 @@ contract TokensManager is ERC20 {
     }
 
     /**
-     * Receives Wei and approves student to spend according to their desired UoC.
+     * Override for approve method. Restrict to this only.
      */
-    function purchaseUoC(address spender, uint8 UoC) external payable requiresStudent returns (bool) {
-        uint256 requiredWei = UoC * ChiefOperatingOfficer(_COO).getFee();
-
-        require(
-            msg.value >= requiredWei
-            , "TokensManager: Not enough Wei sent to purchase UoC"
-        );
-
-        require(
-            msg.value == requiredWei
-            , "TokensManager: Too much Wei sent to purchase UoC"
-        );
-
-        return super.approve(spender, _tokensPerUoC * UoC);
+    function approve(address spender, uint256 amount) public override requiresCOO returns (bool) {
+        return super.approve(spender, amount);
     }
 
     /**
@@ -95,6 +90,6 @@ contract TokensManager is ERC20 {
      * Removes tokens from the total supply.
      */
     function destroyTokens(uint256 amount) public requiresRoundManager {
-        return super._burn(address(this), amount);
+        return super._burn(_COO, amount);
     }
 }

@@ -5,7 +5,7 @@ const UserFactory = artifacts.require("UserFactory");
 module.exports = function (deployer) {
   deployer.deploy(ChiefOperatingOfficer).then((coo) => {
       return deployer.deploy(ManagerFactory, coo.address).then((mf) => {
-        return deployer.deploy(UserFactory, mf.address);
+        return deployer.deploy(UserFactory, mf.address, coo.address);
       });
   });
 };

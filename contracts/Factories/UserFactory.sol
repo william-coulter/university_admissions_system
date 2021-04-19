@@ -10,9 +10,11 @@ import "./ManagerFactory.sol";
  */
 contract UserFactory {
     address internal _managerFactory;
+    address internal _coo;
 
-    constructor(address managerFactory) {
+    constructor(address managerFactory, address coo) {
         _managerFactory = managerFactory;
+        _coo = coo;
     }
 
     modifier requiresRolesManager {
@@ -31,6 +33,6 @@ contract UserFactory {
     }
     
     function createStudent(address owner) public requiresRolesManager returns (address) {
-        return address(new Student(_managerFactory, owner));
+        return address(new Student(_managerFactory, _coo, owner));
     }
 }

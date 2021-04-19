@@ -12,6 +12,9 @@ const Student = artifacts.require("Student");
 
 contract("Scenario 1", () => {
 
+    const INITIAL_SUPPLY = 5 * 18 * 1000;
+    const TOKEN_FEE = 1000;
+
     let cooAccount;
     let adminAccount;
     let studentAccounts;
@@ -43,7 +46,7 @@ contract("Scenario 1", () => {
         const rolesManager = await RolesManager.new(cooContract.address, userFactory.address);
         const sessionManager = await SessionManager.new(cooContract.address, managerFactory.address);
         const courseManager = await CourseManager.new(managerFactory.address);
-        const tokensManager = await TokensManager.new(5 * 18 * 1000, managerFactory.address, cooContract.address);
+        const tokensManager = await TokensManager.new(INITIAL_SUPPLY, managerFactory.address, cooContract.address);
 
         await managerFactory.setRolesManager(rolesManager.address, { from: cooAccount });
         await managerFactory.setSessionManager(sessionManager.address, { from: cooAccount });
@@ -52,7 +55,7 @@ contract("Scenario 1", () => {
 
         // Now lets set up the scenario
         // Set fees and start session
-        await cooContract.setFee(1000, { from: cooAccount });
+        await cooContract.setFee(TOKEN_FEE, { from: cooAccount });
         await cooContract.startSession(managerFactory.address, userFactory.address, { from: cooAccount });
 
         // Admit the admin and retrieve admin contract
@@ -105,10 +108,9 @@ contract("Scenario 1", () => {
         );
 
         // All students purchase 18 UoC
-        await Promise.all(studentContracts.map((sc, i) => 
-            sc.purchaseUoC(18, { from: studentAccounts[i], value: 18000 })
+        await Promise.all(studentContracts.map((sc, i) =>
+            sc.purchaseUoC(18, { from: studentAccounts[i], value: 18 * TOKEN_FEE })
         ));
-        
     });
 
     it("Balance of university system is 90,000 Wei", async () => {
@@ -116,11 +118,18 @@ contract("Scenario 1", () => {
         // to the university is separate to the admission tokens they receive. Instead,
         // testing that the university has 90,000 admission tokens to distribute to students
         // is sufficient for this test.
-        // const tx = await cooContract.getUniversityBalance();
-        // console.log(tx);
+        const tx = await cooContract.getUniversityBalance();
+        assert.equal(tx.words[0], INITIAL_SUPPLY);
+    });
 
-        // assert();
+    it.only("Each student should have a balance of 18,000", async () => {
+        const balances = (await Promise.all(
+            studentContracts.map((sc) => sc.getAllowance())
+        )).map((tx) => tx.words[0]);
 
+        balances.forEach((b) => {
+            assert.equal(b, 18000)
+        });
     });
 });
 

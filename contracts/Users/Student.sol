@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./ChiefOperatingOfficer.sol";
 import "../Factories/ManagerFactory.sol";
 import "../Managers/RoundManager.sol";
 import "../Managers/CourseManager.sol";
@@ -10,7 +11,7 @@ contract Student {
     /**
      * Events
      */
-    event PurhcasedUoC(address owner, uint8 UoC);
+    event PurchasedUoC(address owner, uint8 UoC);
 
     struct Enrolment {
         string code;
@@ -18,14 +19,16 @@ contract Student {
     }
 
     address internal _manager;
+    address _coo;
 
     address internal _owner;
     uint8 internal _purchasedUoC = 0;
     RoundManager.Bid[] _pendingBids;
     Enrolment[] _enrolments;
 
-    constructor(address manager, address owner) {
+    constructor(address manager, address coo, address owner) {
         _manager = manager;
+        _coo = coo;
         _owner = owner;
     }
 
@@ -52,17 +55,17 @@ contract Student {
     }
 
     /**
-     * Gets the student allowance
+     * Gets the student allowance (in admission tokens)
      */
-    function getAllowance() internal view returns (uint256) {
-        return ManagerFactory(_manager).getTokensManager().allowance(address(ManagerFactory(_manager).getTokensManager()), address(this));
+    function getAllowance() public view returns (uint256) {
+        return ManagerFactory(_manager).getTokensManager().allowance(_coo, address(this));
     }
 
     /**
      * Purchases a desired amount of UoC
      */
     function purchaseUoC(uint8 desiredUoC) external payable requiresOwner {
-        bool response = ManagerFactory(_manager).getTokensManager().purchaseUoC{value: msg.value}(address(this), desiredUoC);
+        bool response = ChiefOperatingOfficer(_coo).purchaseUoC{value: msg.value}(address(this), desiredUoC);
 
         require(
             response
@@ -70,7 +73,7 @@ contract Student {
         );
 
         _purchasedUoC += desiredUoC;
-        emit PurhcasedUoC(_owner, desiredUoC);
+        emit PurchasedUoC(_owner, desiredUoC);
     }
 
     /**
