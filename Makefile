@@ -4,7 +4,7 @@ install:
 
 .PHONY: deploy-chain
 deploy-chain: install
-	ganache-cli --gasPrice 0
+	ganache-cli --gasPrice 0 --gasLimit "0xffffff" --allowUnlimitedContractSize
 
 .PHONY: test
 test: install

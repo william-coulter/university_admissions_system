@@ -1,9 +1,7 @@
-const Migrations = artifacts.require("Migrations");
-const Sum = artifacts.require("Sum");
+const ChiefOperatingOfficer = artifacts.require("ChiefOperatingOfficer");
 
 module.exports = function (deployer) {
-  deployer.deploy(Migrations);
-  deployer.deploy(Sum);
+  deployer.deploy(ChiefOperatingOfficer);  
 };
 
   
