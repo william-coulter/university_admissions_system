@@ -211,9 +211,13 @@ contract RoundManager {
         // Does not decrement counters in this contract. This function isn't tested anyway haha
         bool deleted1 = false;
         bool deleted2 = false;
+        uint256 amount;
+    
 
         for (uint256 i; i < _bidsPerCourse[code].length; i++) {
             if (address(_bidsPerCourse[code][i].student) == address(student)) {
+                amount = _bidsPerCourse[code][i].amount;
+
                 // "delete" just sets this to the default value
                 delete _bidsPerCourse[code][i];
                 deleted1 = true;
@@ -235,6 +239,8 @@ contract RoundManager {
             deleted1 && deleted2
             , "Could not remove bid"
         );
+
+        _tokensManager.transferFrom(address(this), address(student), amount);
     }
 
     function seeAllBids() public view requiresStudent returns (Bid[] memory){

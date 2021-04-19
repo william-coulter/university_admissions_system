@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../Managers/RolesManager.sol";
 import "../Managers/RoundManager.sol";
-import "../Managers/SessionManager.sol";
 import "../Managers/CourseManager.sol";
 import "../Managers/TokensManager.sol";
 import "./ChiefOperatingOfficer.sol";
@@ -16,10 +14,8 @@ contract Student {
     }
 
     ChiefOperatingOfficer _COO;
-
-    RolesManager internal _rolesManager;
-    CourseManager internal _courseManager;
-    SessionManager internal _sessionManager;
+ 
+    CourseManager internal _courseManager;    
     TokensManager internal _tokensManager;
     RoundManager internal _roundManager;
 
@@ -31,10 +27,8 @@ contract Student {
     constructor(ChiefOperatingOfficer _coo, address owner) {
         _owner = owner;
         _COO = _coo;
-
-        _rolesManager = _COO.getRolesManager();
-        _courseManager = _COO.getCourseManager();
-        _sessionManager = _COO.getSessionManager();
+        
+        _courseManager = _COO.getCourseManager();        
         _tokensManager = _COO.getTokensManager();
         _roundManager = _COO.getRoundManager();
     }
@@ -71,7 +65,7 @@ contract Student {
     /**
      * Purchases a desired amount of UoC
      */
-    function purchaseUoC(uint8 desiredUoC, uint256 amount) public {
+    function purchaseUoC(uint8 desiredUoC, uint256 amount) public requiresOwner {
         bool response = _tokensManager.purchaseUoC{value: amount}(address(this), desiredUoC);
 
         require(
@@ -83,24 +77,94 @@ contract Student {
     }
 
     /**
-     * Adds a bid
+     * Adds a bid, checking that it's valid and transferring allowance to RoundManager
      */
-    function addBid(RoundManager.Bid memory bid) public requiresOwner {
-        checkValidBid(bid);
+    function addBid(string memory code, uint256 amount) public requiresOwner {
+
+        RoundManager.Bid memory newBid = createBid(code, amount);
+
         require(
-            _tokensManager.transferFrom(address(this), address(_roundManager), bid.amount)
+            _tokensManager.transferFrom(address(this), address(_roundManager), newBid.amount)
             , "Student: Could not transfer allowance to RoundManager to add a bid"
         );
-        _pendingBids.push(bid);
+
+        _pendingBids.push(newBid);
     }
 
     /**
-     * Throws errors if the bid is not valid
+     * Alters an existing bid.
+     * This removes the bid and then attempts to add the new one.
+     *
+     * The 'code' provided must be in the pending bids.
      */
-    function checkValidBid(RoundManager.Bid memory bid) internal view {
+    function alterBid(string memory code, uint256 newAmount) public requiresOwner {
+        bool isExistingBid = false;
+        RoundManager.Bid memory currBid;
+
+        for (uint256 i; i < _pendingBids.length; i++) {
+            if (keccak256(bytes(_pendingBids[i].course.code)) == keccak256(bytes(code))) {
+                isExistingBid = true;
+                currBid = _pendingBids[i];
+                delete _pendingBids[i];
+                _roundManager.removeBid(currBid.course.code, this);
+
+                break;
+            }
+        }
+
+        require(
+            isExistingBid
+            , "Student: Bid to alter does not exist"
+        );
+
+        // Transfers allowance back from the RoundManager back to the Student
+        _roundManager.removeBid(code, this);
+        addBid(code, newAmount);
+    }
+
+    /**
+     * Removes a bid, transferring tokens back to this student
+     */
+    function removeBid(string memory code) public requiresOwner {
+        bool isExistingBid = false;
+        RoundManager.Bid memory currBid;
+
+        for (uint256 i; i < _pendingBids.length; i++) {
+            if (keccak256(bytes(_pendingBids[i].course.code)) == keccak256(bytes((code)))) {
+                isExistingBid = true;
+                currBid = _pendingBids[i];
+                delete _pendingBids[i];
+
+                break;
+            }
+        }
+
+        require(
+            isExistingBid
+            , "Student: Bid to delete does not exist"
+        );
+
+        _roundManager.removeBid(code, this);
+    }
+
+    /**
+     * Transfers tokens to another student
+     */
+    function transfer(uint256 amount, Student student) public requiresOwner {
+        _tokensManager.transferToStudent(address(student), amount);
+    }
+
+    /**
+     * Throws errors if the bid is not valid and cannot be created
+     */
+    function createBid(string memory code, uint256 amount) internal view requiresOwner returns (RoundManager.Bid memory) {
+        // This method checks that the course exists
+        CourseManager.Course memory course = _courseManager.getCourse(code);
+        RoundManager.Bid memory newBid = RoundManager.Bid(amount, course, this, block.timestamp);
+
         // check allowance
         require(
-            getAllowance() > bid.amount
+            getAllowance() > newBid.amount
             , "Student: Not enough admission tokens to add bid."
         );
 
@@ -111,9 +175,11 @@ contract Student {
         }
 
         require(
-            UoCPending + bid.course.UoC <= _purchasedUoC
+            UoCPending + newBid.course.UoC <= _purchasedUoC
             , "Student: Cannot bid on more UoC than purchased"
         );
+
+        return newBid;
     }
 
     /**

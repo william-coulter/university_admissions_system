@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "../Users/ChiefOperatingOfficer.sol";
+import "../Users/Administrator.sol";
+import "../Users/Student.sol";
 
 /**
  * The RolesManager is responsible for handling the permissions associated 
@@ -13,6 +15,7 @@ contract RolesManager {
 
     ChiefOperatingOfficer internal _COO;
     
+    // Initially all values in mapping are set to "Unknown"
     mapping (address => Roles) internal _roles;
 
     constructor(ChiefOperatingOfficer _coo) {
@@ -86,10 +89,11 @@ contract RolesManager {
 
         // passed all checks, now we can authorize
         _roles[authorizee] = role;
-
-        return address(0);
-        // TODO: create new contract, set owner and return address
-
+        if (role == Roles.Admin) {
+            return address(new Administrator(_COO, authorizee));
+        } else {
+            return address(new Student(_COO, authorizee));
+        }       
     }
 
     /**

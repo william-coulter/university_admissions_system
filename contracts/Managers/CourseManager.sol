@@ -85,7 +85,7 @@ contract CourseManager {
      */
     function setEnrolment(string memory course, Student[] memory newEnrolment) public requiresRoundManager {
         require(
-            keccak256(bytes(_courses[course].code)) != keccak256(bytes(""))
+            courseExists(_courses[course].code)
             , "Provided course does not exist"
         );
 
@@ -97,5 +97,17 @@ contract CourseManager {
      */
     function courseExists(string memory code) internal view returns (bool) {
         return keccak256(bytes(_courses[code].code)) != keccak256(bytes(""));
+    }
+
+    /**
+     * Gets a required Course
+     */
+    function getCourse(string memory code) public view returns (Course memory) {
+        require(
+            courseExists(code)
+            , "CourseManager: Course does not exist"
+        );
+
+        return _courses[code];
     }
 }

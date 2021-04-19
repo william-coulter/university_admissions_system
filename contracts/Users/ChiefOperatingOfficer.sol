@@ -80,7 +80,7 @@ contract ChiefOperatingOfficer {
     /**
      * Gets token fee for the session
      */
-    function getFee() public returns (uint256) {
+    function getFee() public view returns (uint256) {
         return _tokenFee;
     }
 
