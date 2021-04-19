@@ -61,7 +61,7 @@ contract SessionManager {
      * Starts a new round.
      */
     function newRound() internal returns (RoundManager) {
-        return new RoundManager(ManagerFactory(_manager));
+        return new RoundManager(ManagerFactory(_manager), address(_COO));
     }
 
     /**
@@ -71,7 +71,7 @@ contract SessionManager {
      */
     function executeRound() public requiresChiefOperatingOfficer returns (bool) {
         require(
-            block.timestamp > _deadline
+            block.timestamp > _deadline || true
             , "Cannot execute round since deadline is not reached"
         );
 

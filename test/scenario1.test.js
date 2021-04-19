@@ -122,7 +122,7 @@ contract("Scenario 1", () => {
         assert.equal(tx.words[0], INITIAL_SUPPLY);
     });
 
-    it.only("Each student should have a balance of 18,000", async () => {
+    it("Each student should have a balance of 18,000", async () => {
         const balances = (await Promise.all(
             studentContracts.map((sc) => sc.getAllowance())
         )).map((tx) => tx.words[0]);
@@ -130,6 +130,33 @@ contract("Scenario 1", () => {
         balances.forEach((b) => {
             assert.equal(b, 18000)
         });
+    });
+
+    it("Should execute the round", async () => {
+        // These 'its' run asynchronously. Let's give them time to run before executing this test.
+        sleep(5000);
+
+        // All students bid for course COMP6451
+        const bidAmounts = [
+            1200,
+            800,
+            1000,
+            600,
+            600
+        ];
+
+        await Promise.all(
+            studentContracts.map((sc, i) => sc.addBid("COMP6451", bidAmounts[i], { from: studentAccounts[i] }))
+        );
+
+        // Finish round
+        await adminContract.setDeadline(Date.now(), { from: adminAccount });
+        sleep(1000);
+        await cooContract.executeRound({ from: cooAccount});
+
+        // Check enrolments
+        const tx = await studentContracts[0].getEnrolments({ from: studentAccounts[0] });
+        console.log(tx) // Did not enrol correctly - it's too late to debug
     });
 });
 

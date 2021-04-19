@@ -70,6 +70,13 @@ contract ChiefOperatingOfficer {
     }
 
     /**
+     * Returns true if a new round was started (students missed out on bids)
+     */
+    function executeRound() external requiresOwner returns (bool) {
+        return ManagerFactory(_managerFactory).getSessionManager().executeRound();
+    }
+
+    /**
      * Changes the owner of the COO
      */
     function changeOwner(address newOwner) public requiresOwner {

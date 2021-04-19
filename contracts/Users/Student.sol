@@ -62,6 +62,13 @@ contract Student {
     }
 
     /**
+     * Returns current enrolments
+     */
+    function getEnrolments() external view requiresOwner returns (Enrolment[] memory) {
+        return _enrolments;
+    }
+
+    /**
      * Purchases a desired amount of UoC
      */
     function purchaseUoC(uint8 desiredUoC) external payable requiresOwner {
@@ -84,7 +91,8 @@ contract Student {
         RoundManager.Bid memory newBid = createBid(code, amount);
 
         require(
-            ManagerFactory(_manager).getTokensManager().transferFrom(address(this), address(ManagerFactory(_manager).getRoundManager()), newBid.amount)
+            ManagerFactory(_manager).getTokensManager()
+                .transferFrom(_coo, address(ManagerFactory(_manager).getRoundManager()), newBid.amount)
             , "Student: Could not transfer allowance to RoundManager to add a bid"
         );
 
